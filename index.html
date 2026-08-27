@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pollinations Test App v4</title>
+  <title>Pollinations Test App v6</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="header">
-      <h1>Pollinations Test App v4</h1>
-      <p>مدل‌ها فقط از API لود می‌شوند؛ هیچ مدل پیش‌فرضی وجود ندارد.</p>
+      <h1>Pollinations Test App v6</h1>
+      <p>مدل‌ها با billing type: paid / quest / free / unknown</p>
     </header>
 
     <section class="panel">
@@ -159,28 +159,22 @@
 
       <section class="tab-panel" id="tab-models">
         <div class="panel">
-          <h2>Models</h2>
+          <h2>Models by Billing Type</h2>
 
           <button id="loadAllModelsBtn">Load All Models from API</button>
           <div id="modelsStatus" class="status hidden"></div>
 
-          <h3>Text Models</h3>
-          <pre id="modelsTextOutput" class="output"></pre>
+          <h3>Paid Models</h3>
+          <pre id="modelsPaidOutput" class="output"></pre>
 
-          <h3>Image Models</h3>
-          <pre id="modelsImageOutput" class="output"></pre>
+          <h3>Quest Models</h3>
+          <pre id="modelsQuestOutput" class="output"></pre>
 
-          <h3>Audio Models</h3>
-          <pre id="modelsAudioOutput" class="output"></pre>
+          <h3>Free Models</h3>
+          <pre id="modelsFreeOutput" class="output"></pre>
 
-          <h3>Video Models</h3>
-          <pre id="modelsVideoOutput" class="output"></pre>
-
-          <h3>Embedding Models</h3>
-          <pre id="modelsEmbeddingsOutput" class="output"></pre>
-
-          <h3>3D Models</h3>
-          <pre id="models3dOutput" class="output"></pre>
+          <h3>Unknown Models</h3>
+          <pre id="modelsUnknownOutput" class="output"></pre>
         </div>
       </section>
     </main>
