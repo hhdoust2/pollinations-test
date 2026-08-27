@@ -5,14 +5,25 @@ function getApiKey() {
 }
 
 function setStatus(el, message, isError = false) {
+  if (!el) return;
   el.style.display = message ? 'block' : 'none';
   el.textContent = message || '';
   el.classList.toggle('error', isError);
   el.classList.toggle('hidden', !message);
 }
 
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn(`Element not found: ${id}`);
+    return;
+  }
+  el.textContent = value;
+}
+
 function fillSelect(selectId, items) {
   const select = document.getElementById(selectId);
+  if (!select) return;
   select.innerHTML = '';
   if (!items || !items.length) return;
   select.innerHTML = items
@@ -48,13 +59,13 @@ function normalizeModelList(data) {
 function detectBillingType(model) {
   const raw = JSON.stringify(model).toLowerCase();
 
-  if (raw.includes('"paid"') || raw.includes('billing":"paid') || raw.includes('pricing') && raw.includes('paid')) {
+  if (raw.includes('"paid"') || (raw.includes('pricing') && raw.includes('paid')) || raw.includes('billing":"paid')) {
     return 'paid';
   }
-  if (raw.includes('"quest"') || raw.includes('billing":"quest') || raw.includes('pricing') && raw.includes('quest')) {
+  if (raw.includes('"quest"') || (raw.includes('pricing') && raw.includes('quest')) || raw.includes('billing":"quest')) {
     return 'quest';
   }
-  if (raw.includes('"free"') || raw.includes('billing":"free') || raw.includes('pricing') && raw.includes('free')) {
+  if (raw.includes('"free"') || (raw.includes('pricing') && raw.includes('free')) || raw.includes('billing":"free')) {
     return 'free';
   }
   return 'unknown';
@@ -72,33 +83,32 @@ function getLabel(model) {
 }
 
 function filterCategoryModels(models, category) {
-  return models.filter((m) => {
-    const id = getModelId(m).toLowerCase();
-    if (!id) return false;
+  return models
+    .filter((m) => {
+      const id = getModelId(m).toLowerCase();
+      if (!id) return false;
 
-    if (category === 'text') {
-      return !id.includes('image') && !id.includes('video') && !id.includes('audio') && !id.includes('embed') && !id.includes('3d');
-    }
-    if (category === 'image') {
-      return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea') || id.includes('zimage');
-    }
-    if (category === 'audio') {
-      return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro') || id.includes('eleven');
-    }
-    if (category === 'video') {
-      return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance') || id.includes('reel');
-    }
-    if (category === 'embeddings') {
-      return id.includes('embed');
-    }
-    if (category === '3d') {
-      return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
-    }
-    return false;
-  }).map((m) => {
-    const id = getModelId(m);
-    return { id, label: getLabel(m), raw: m };
-  });
+      if (category === 'text') {
+        return !id.includes('image') && !id.includes('video') && !id.includes('audio') && !id.includes('embed') && !id.includes('3d');
+      }
+      if (category === 'image') {
+        return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea') || id.includes('zimage');
+      }
+      if (category === 'audio') {
+        return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro') || id.includes('eleven');
+      }
+      if (category === 'video') {
+        return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance') || id.includes('reel');
+      }
+      if (category === 'embeddings') {
+        return id.includes('embed');
+      }
+      if (category === '3d') {
+        return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
+      }
+      return false;
+    })
+    .map((m) => ({ id: getModelId(m), label: getLabel(m), raw: m }));
 }
 
 function groupByBilling(models) {
@@ -138,164 +148,200 @@ async function initAllModelSelects() {
   }
 }
 
-// tabs
+// Tabs
 document.querySelectorAll('.tab').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    const panel = document.getElementById(`tab-${btn.dataset.tab}`);
+    if (panel) panel.classList.add('active');
   });
 });
 
-// reload buttons
-document.getElementById('reloadTextModels').addEventListener('click', () => refreshCategory('text', 'textModel'));
-document.getElementById('reloadImageModels').addEventListener('click', () => refreshCategory('image', 'imageModel'));
-document.getElementById('reloadAudioModels').addEventListener('click', () => refreshCategory('audio', 'audioModel'));
-document.getElementById('reloadVideoModels').addEventListener('click', () => refreshCategory('video', 'videoModel'));
-document.getElementById('reloadEmbedModels').addEventListener('click', () => refreshCategory('embeddings', 'embedModel'));
-document.getElementById('reload3dModels').addEventListener('click', () => refreshCategory('3d', 'model3d'));
+// Reload buttons
+const reloadMap = [
+  ['reloadTextModels', () => refreshCategory('text', 'textModel')],
+  ['reloadImageModels', () => refreshCategory('image', 'imageModel')],
+  ['reloadAudioModels', () => refreshCategory('audio', 'audioModel')],
+  ['reloadVideoModels', () => refreshCategory('video', 'videoModel')],
+  ['reloadEmbedModels', () => refreshCategory('embeddings', 'embedModel')],
+  ['reload3dModels', () => refreshCategory('3d', 'model3d')],
+];
+
+reloadMap.forEach(([id, fn]) => {
+  const btn = document.getElementById(id);
+  if (btn) btn.addEventListener('click', fn);
+});
 
 // text
-document.getElementById('genTextBtn').addEventListener('click', async () => {
-  const statusEl = document.getElementById('textStatus');
-  const outputEl = document.getElementById('textOutput');
-  try {
-    setStatus(statusEl, 'در حال تولید متن...');
-    const prompt = document.getElementById('textPrompt').value.trim();
-    const model = document.getElementById('textModel').value;
+const genTextBtn = document.getElementById('genTextBtn');
+if (genTextBtn) {
+  genTextBtn.addEventListener('click', async () => {
+    const statusEl = document.getElementById('textStatus');
+    const outputEl = document.getElementById('textOutput');
+    try {
+      setStatus(statusEl, 'در حال تولید متن...');
+      const prompt = document.getElementById('textPrompt')?.value.trim() || '';
+      const model = document.getElementById('textModel')?.value || '';
 
-    const data = await apiFetch('/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
-    });
+      const data = await apiFetch('/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
+      });
 
-    outputEl.textContent = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
-    setStatus(statusEl, 'متن تولید شد.');
-  } catch (e) {
-    setStatus(statusEl, e.message, true);
-  }
-});
+      if (outputEl) {
+        outputEl.textContent = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
+      }
+      setStatus(statusEl, 'متن تولید شد.');
+    } catch (e) {
+      setStatus(statusEl, e.message, true);
+    }
+  });
+}
 
 // image
-document.getElementById('genImageBtn').addEventListener('click', () => {
-  const statusEl = document.getElementById('imageStatus');
-  const outputEl = document.getElementById('imageOutput');
-  const prompt = document.getElementById('imagePrompt').value.trim();
-  const model = document.getElementById('imageModel').value;
-  const apiKey = getApiKey();
+const genImageBtn = document.getElementById('genImageBtn');
+if (genImageBtn) {
+  genImageBtn.addEventListener('click', () => {
+    const statusEl = document.getElementById('imageStatus');
+    const outputEl = document.getElementById('imageOutput');
+    const prompt = document.getElementById('imagePrompt')?.value.trim() || '';
+    const model = document.getElementById('imageModel')?.value || '';
+    const apiKey = getApiKey();
 
-  if (!prompt) return setStatus(statusEl, 'پرامپت تصویر خالی است.', true);
+    if (!prompt) return setStatus(statusEl, 'پرامپت تصویر خالی است.', true);
 
-  setStatus(statusEl, 'در حال ساخت تصویر...');
-  outputEl.onload = () => setStatus(statusEl, 'تصویر آماده شد.');
-  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت تصویر.', true);
+    setStatus(statusEl, 'در حال ساخت تصویر...');
+    if (!outputEl) return;
 
-  let url = `${baseUrl}/image/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}`;
-  if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
-  outputEl.src = url;
-});
+    outputEl.onload = () => setStatus(statusEl, 'تصویر آماده شد.');
+    outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت تصویر.', true);
 
-// audio
-document.getElementById('genAudioBtn').addEventListener('click', () => {
-  const statusEl = document.getElementById('audioStatus');
-  const outputEl = document.getElementById('audioOutput');
-  const text = document.getElementById('audioText').value.trim();
-  const voice = document.getElementById('audioVoice').value;
-  const model = document.getElementById('audioModel').value;
-  const apiKey = getApiKey();
+    let url = `${baseUrl}/image/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}`;
+    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+    outputEl.src = url;
+  });
+}
 
-  if (!text) return setStatus(statusEl, 'متن صدا خالی است.', true);
+// audio: فقط voice-based
+const genAudioBtn = document.getElementById('genAudioBtn');
+if (genAudioBtn) {
+  genAudioBtn.addEventListener('click', () => {
+    const statusEl = document.getElementById('audioStatus');
+    const outputEl = document.getElementById('audioOutput');
+    const text = document.getElementById('audioText')?.value.trim() || '';
+    const voice = document.getElementById('audioVoice')?.value || 'nova';
+    const apiKey = getApiKey();
 
-  setStatus(statusEl, 'در حال ساخت صدا...');
-  let url = `${baseUrl}/audio/${encodeURIComponent(text)}?voice=${encodeURIComponent(voice)}&model=${encodeURIComponent(model)}`;
-  if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+    if (!text) return setStatus(statusEl, 'متن صدا خالی است.', true);
 
-  outputEl.src = url;
-  outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
-  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا.', true);
-});
+    setStatus(statusEl, 'در حال ساخت صدا...');
+
+    if (!outputEl) return;
+
+    let url = `${baseUrl}/audio/${encodeURIComponent(text)}?voice=${encodeURIComponent(voice)}`;
+    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+
+    outputEl.src = url;
+    outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
+    outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. فقط voice انتخاب می‌شود و اگر باز نشد، احتمالا آن endpoint/voice در دسترس نیست.', true);
+  });
+}
 
 // video
-document.getElementById('genVideoBtn').addEventListener('click', () => {
-  const statusEl = document.getElementById('videoStatus');
-  const outputEl = document.getElementById('videoOutput');
-  const prompt = document.getElementById('videoPrompt').value.trim();
-  const model = document.getElementById('videoModel').value;
-  const duration = document.getElementById('videoDuration').value;
-  const apiKey = getApiKey();
+const genVideoBtn = document.getElementById('genVideoBtn');
+if (genVideoBtn) {
+  genVideoBtn.addEventListener('click', () => {
+    const statusEl = document.getElementById('videoStatus');
+    const outputEl = document.getElementById('videoOutput');
+    const prompt = document.getElementById('videoPrompt')?.value.trim() || '';
+    const model = document.getElementById('videoModel')?.value || '';
+    const duration = document.getElementById('videoDuration')?.value || '4';
+    const apiKey = getApiKey();
 
-  if (!prompt) return setStatus(statusEl, 'پرامپت ویدیو خالی است.', true);
+    if (!prompt) return setStatus(statusEl, 'پرامپت ویدیو خالی است.', true);
 
-  setStatus(statusEl, 'در حال ساخت ویدیو...');
-  let url = `${baseUrl}/video/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&duration=${encodeURIComponent(duration)}`;
-  if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+    setStatus(statusEl, 'در حال ساخت ویدیو...');
+    if (!outputEl) return;
 
-  outputEl.src = url;
-  outputEl.onloadeddata = () => setStatus(statusEl, 'ویدیو آماده شد.');
-  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت ویدیو.', true);
-});
+    let url = `${baseUrl}/video/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&duration=${encodeURIComponent(duration)}`;
+    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+
+    outputEl.src = url;
+    outputEl.onloadeddata = () => setStatus(statusEl, 'ویدیو آماده شد.');
+    outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت ویدیو.', true);
+  });
+}
 
 // embeddings
-document.getElementById('genEmbedBtn').addEventListener('click', async () => {
-  const statusEl = document.getElementById('embedStatus');
-  const outputEl = document.getElementById('embedOutput');
-  try {
-    setStatus(statusEl, 'در حال تولید embedding...');
-    const text = document.getElementById('embedText').value.trim();
-    const model = document.getElementById('embedModel').value;
+const genEmbedBtn = document.getElementById('genEmbedBtn');
+if (genEmbedBtn) {
+  genEmbedBtn.addEventListener('click', async () => {
+    const statusEl = document.getElementById('embedStatus');
+    const outputEl = document.getElementById('embedOutput');
+    try {
+      setStatus(statusEl, 'در حال تولید embedding...');
+      const text = document.getElementById('embedText')?.value.trim() || '';
+      const model = document.getElementById('embedModel')?.value || '';
 
-    const data = await apiFetch('/v1/embeddings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: text, dimensions: 512 })
-    });
+      const data = await apiFetch('/v1/embeddings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, input: text, dimensions: 512 })
+      });
 
-    outputEl.textContent = JSON.stringify(data, null, 2);
-    setStatus(statusEl, 'Embedding ساخته شد.');
-  } catch (e) {
-    setStatus(statusEl, e.message, true);
-  }
-});
+      if (outputEl) outputEl.textContent = JSON.stringify(data, null, 2);
+      setStatus(statusEl, 'Embedding ساخته شد.');
+    } catch (e) {
+      setStatus(statusEl, e.message, true);
+    }
+  });
+}
 
 // 3D
-document.getElementById('gen3dBtn').addEventListener('click', () => {
-  const statusEl = document.getElementById('model3dStatus');
-  const outputEl = document.getElementById('model3dOutput');
-  const prompt = document.getElementById('model3dPrompt').value.trim();
-  const model = document.getElementById('model3d').value;
-  const resolution = document.getElementById('resolution3d').value;
-  const apiKey = getApiKey();
+const gen3dBtn = document.getElementById('gen3dBtn');
+if (gen3dBtn) {
+  gen3dBtn.addEventListener('click', () => {
+    const statusEl = document.getElementById('model3dStatus');
+    const outputEl = document.getElementById('model3dOutput');
+    const prompt = document.getElementById('model3dPrompt')?.value.trim() || '';
+    const model = document.getElementById('model3d')?.value || '';
+    const resolution = document.getElementById('resolution3d')?.value || 'low';
+    const apiKey = getApiKey();
 
-  if (!prompt) return setStatus(statusEl, 'ورودی 3D خالی است.', true);
+    if (!prompt) return setStatus(statusEl, 'ورودی 3D خالی است.', true);
 
-  setStatus(statusEl, 'در حال ساخت 3D...');
-  let url = `${baseUrl}/3d/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&resolution=${encodeURIComponent(resolution)}`;
-  if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+    setStatus(statusEl, 'در حال ساخت 3D...');
+    let url = `${baseUrl}/3d/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&resolution=${encodeURIComponent(resolution)}`;
+    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
-  outputEl.textContent = url;
-  setStatus(statusEl, 'لینک 3D آماده شد.');
-});
+    if (outputEl) outputEl.textContent = url;
+    setStatus(statusEl, 'لینک 3D آماده شد.');
+  });
+}
 
-// models by billing type
-document.getElementById('loadAllModelsBtn').addEventListener('click', async () => {
-  const statusEl = document.getElementById('modelsStatus');
+// models
+const loadAllModelsBtn = document.getElementById('loadAllModelsBtn');
+if (loadAllModelsBtn) {
+  loadAllModelsBtn.addEventListener('click', async () => {
+    const statusEl = document.getElementById('modelsStatus');
+    try {
+      setStatus(statusEl, 'در حال دریافت مدل‌ها...');
+      const models = await loadModelsFromApi();
+      const groups = groupByBilling(models);
 
-  try {
-    setStatus(statusEl, 'در حال دریافت مدل‌ها...');
-    const models = await loadModelsFromApi();
-    const groups = groupByBilling(models);
+      setText('modelsPaidOutput', JSON.stringify(groups.paid, null, 2));
+      setText('modelsQuestOutput', JSON.stringify(groups.quest, null, 2));
+      setText('modelsFreeOutput', JSON.stringify(groups.free, null, 2));
+      setText('modelsUnknownOutput', JSON.stringify(groups.unknown, null, 2));
 
-    document.getElementById('modelsPaidOutput').textContent = JSON.stringify(groups.paid, null, 2);
-    document.getElementById('modelsQuestOutput').textContent = JSON.stringify(groups.quest, null, 2);
-    document.getElementById('modelsFreeOutput').textContent = JSON.stringify(groups.free, null, 2);
-    document.getElementById('modelsUnknownOutput').textContent = JSON.stringify(groups.unknown, null, 2);
-
-    setStatus(statusEl, 'مدل‌ها بر اساس billing type جدا شدند.');
-  } catch (e) {
-    setStatus(statusEl, e.message, true);
-  }
-});
+      setStatus(statusEl, 'مدل‌ها بر اساس billing type جدا شدند.');
+    } catch (e) {
+      setStatus(statusEl, e.message, true);
+    }
+  });
+}
 
 document.addEventListener('DOMContentLoaded', initAllModelSelects);
