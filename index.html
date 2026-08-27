@@ -2,21 +2,22 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pollinations Test App v2</title>
+  <title>Pollinations Test App v3</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="header">
-      <h1>Pollinations Test App v2</h1>
-      <p>تست متن، تصویر، صدا، ویدیو، embeddings، 3D و مدل‌ها</p>
+      <h1>Pollinations Test App v3</h1>
+      <p>نسخه تستی با لیست مدل‌های تفکیک‌شده</p>
     </header>
 
     <section class="panel">
       <label for="apiKey">API Key</label>
       <input id="apiKey" type="text" placeholder="sk_... یا pk_..." />
-      <div class="hint">کلید را برای همه‌ی درخواست‌ها استفاده می‌کند.</div>
+      <div class="hint">این کلید برای درخواست‌های نیازمند احراز هویت استفاده می‌شود.</div>
     </section>
 
     <nav class="tabs">
@@ -32,19 +33,12 @@
     <main>
       <section class="tab-panel active" id="tab-text">
         <div class="panel">
+          <h2>Text Generation</h2>
           <label for="textPrompt">Prompt</label>
           <textarea id="textPrompt">سلام، یک توضیح کوتاه درباره هوش مصنوعی بده.</textarea>
 
-          <label for="textModel">Model</label>
-          <select id="textModel">
-            <option value="openai">openai</option>
-            <option value="gpt-5.4">gpt-5.4</option>
-            <option value="gemini-fast">gemini-fast</option>
-            <option value="claude">claude</option>
-            <option value="qwen3.7-flash">qwen3.7-flash</option>
-            <option value="deepseek">deepseek</option>
-            <option value="llama">llama</option>
-          </select>
+          <label for="textModel">Text Model</label>
+          <select id="textModel"></select>
 
           <button id="genTextBtn">Generate Text</button>
           <div id="textStatus" class="status hidden"></div>
@@ -54,19 +48,12 @@
 
       <section class="tab-panel" id="tab-image">
         <div class="panel">
+          <h2>Image Generation</h2>
           <label for="imagePrompt">Prompt</label>
           <textarea id="imagePrompt">a cat in space</textarea>
 
-          <label for="imageModel">Model</label>
-          <select id="imageModel">
-            <option value="flux">flux</option>
-            <option value="krea">krea</option>
-            <option value="dreamshaper">dreamshaper</option>
-            <option value="ideogram-v4-quality">ideogram-v4-quality</option>
-            <option value="gpt-image-2">gpt-image-2</option>
-            <option value="qwen-image">qwen-image</option>
-            <option value="nova-canvas">nova-canvas</option>
-          </select>
+          <label for="imageModel">Image Model</label>
+          <select id="imageModel"></select>
 
           <button id="genImageBtn">Generate Image</button>
           <div id="imageStatus" class="status hidden"></div>
@@ -76,27 +63,18 @@
 
       <section class="tab-panel" id="tab-audio">
         <div class="panel">
+          <h2>Audio Generation</h2>
           <label for="audioText">Text</label>
           <textarea id="audioText">Hello world</textarea>
 
           <div class="grid">
             <div>
               <label for="audioVoice">Voice</label>
-              <select id="audioVoice">
-                <option value="nova">nova</option>
-                <option value="alloy">alloy</option>
-                <option value="echo">echo</option>
-                <option value="shimmer">shimmer</option>
-                <option value="fable">fable</option>
-              </select>
+              <select id="audioVoice"></select>
             </div>
             <div>
-              <label for="audioModel">Model</label>
-              <select id="audioModel">
-                <option value="elevenlabs">elevenlabs</option>
-                <option value="qwen-tts">qwen-tts</option>
-                <option value="whisper">whisper</option>
-              </select>
+              <label for="audioModel">Audio Model</label>
+              <select id="audioModel"></select>
             </div>
           </div>
 
@@ -108,18 +86,14 @@
 
       <section class="tab-panel" id="tab-video">
         <div class="panel">
+          <h2>Video Generation</h2>
           <label for="videoPrompt">Prompt</label>
           <textarea id="videoPrompt">sunset timelapse over the ocean</textarea>
 
           <div class="grid">
             <div>
-              <label for="videoModel">Model</label>
-              <select id="videoModel">
-                <option value="veo">veo</option>
-                <option value="wan">wan</option>
-                <option value="seedance-2.0">seedance-2.0</option>
-                <option value="nova-reel">nova-reel</option>
-              </select>
+              <label for="videoModel">Video Model</label>
+              <select id="videoModel"></select>
             </div>
             <div>
               <label for="videoDuration">Duration</label>
@@ -135,8 +109,12 @@
 
       <section class="tab-panel" id="tab-embeddings">
         <div class="panel">
+          <h2>Embeddings</h2>
           <label for="embedText">Text</label>
           <textarea id="embedText">Hello world</textarea>
+
+          <label for="embedModel">Embedding Model</label>
+          <select id="embedModel"></select>
 
           <button id="genEmbedBtn">Generate Embedding</button>
           <div id="embedStatus" class="status hidden"></div>
@@ -146,16 +124,14 @@
 
       <section class="tab-panel" id="tab-3d">
         <div class="panel">
-          <label for="model3dPrompt">Prompt / Image URL</label>
-          <textarea id="model3dPrompt">a toy car</textarea>
+          <h2>3D Generation</h2>
+          <label for="model3dPrompt">Image URL / Prompt</label>
+          <textarea id="model3dPrompt">https://example.com/image.jpg</textarea>
 
           <div class="grid">
             <div>
-              <label for="model3d">Model</label>
-              <select id="model3d">
-                <option value="trellis-2">trellis-2</option>
-                <option value="hyper3d-rodin">hyper3d-rodin</option>
-              </select>
+              <label for="model3d">3D Model</label>
+              <select id="model3d"></select>
             </div>
             <div>
               <label for="resolution3d">Resolution</label>
@@ -175,9 +151,43 @@
 
       <section class="tab-panel" id="tab-models">
         <div class="panel">
-          <button id="loadModelsBtn">Load /v1/models</button>
-          <div id="modelsStatus" class="status hidden"></div>
-          <pre id="modelsOutput" class="output"></pre>
+          <h2>Model Lists</h2>
+
+          <div class="model-block">
+            <h3>Text Models</h3>
+            <button data-load-models="text">Load Text Models</button>
+            <pre id="modelsTextOutput" class="output"></pre>
+          </div>
+
+          <div class="model-block">
+            <h3>Image Models</h3>
+            <button data-load-models="image">Load Image Models</button>
+            <pre id="modelsImageOutput" class="output"></pre>
+          </div>
+
+          <div class="model-block">
+            <h3>Audio Models</h3>
+            <button data-load-models="audio">Load Audio Models</button>
+            <pre id="modelsAudioOutput" class="output"></pre>
+          </div>
+
+          <div class="model-block">
+            <h3>Video Models</h3>
+            <button data-load-models="video">Load Video Models</button>
+            <pre id="modelsVideoOutput" class="output"></pre>
+          </div>
+
+          <div class="model-block">
+            <h3>Embedding Models</h3>
+            <button data-load-models="embeddings">Load Embedding Models</button>
+            <pre id="modelsEmbeddingsOutput" class="output"></pre>
+          </div>
+
+          <div class="model-block">
+            <h3>3D Models</h3>
+            <button data-load-models="3d">Load 3D Models</button>
+            <pre id="models3dOutput" class="output"></pre>
+          </div>
         </div>
       </section>
     </main>
