@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pollinations Test App v2</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>Pollinations Test App v2</h1>
+      <p>تست متن، تصویر، صدا، ویدیو، embeddings، 3D و مدل‌ها</p>
+    </header>
+
+    <section class="panel">
+      <label for="apiKey">API Key</label>
+      <input id="apiKey" type="text" placeholder="sk_... یا pk_..." />
+      <div class="hint">کلید را برای همه‌ی درخواست‌ها استفاده می‌کند.</div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="text">Text</button>
+      <button class="tab" data-tab="image">Image</button>
+      <button class="tab" data-tab="audio">Audio</button>
+      <button class="tab" data-tab="video">Video</button>
+      <button class="tab" data-tab="embeddings">Embeddings</button>
+      <button class="tab" data-tab="3d">3D</button>
+      <button class="tab" data-tab="models">Models</button>
+    </nav>
+
+    <main>
+      <section class="tab-panel active" id="tab-text">
+        <div class="panel">
+          <label for="textPrompt">Prompt</label>
+          <textarea id="textPrompt">سلام، یک توضیح کوتاه درباره هوش مصنوعی بده.</textarea>
+
+          <label for="textModel">Model</label>
+          <select id="textModel">
+            <option value="openai">openai</option>
+            <option value="gpt-5.4">gpt-5.4</option>
+            <option value="gemini-fast">gemini-fast</option>
+            <option value="claude">claude</option>
+            <option value="qwen3.7-flash">qwen3.7-flash</option>
+            <option value="deepseek">deepseek</option>
+            <option value="llama">llama</option>
+          </select>
+
+          <button id="genTextBtn">Generate Text</button>
+          <div id="textStatus" class="status hidden"></div>
+          <pre id="textOutput" class="output"></pre>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-image">
+        <div class="panel">
+          <label for="imagePrompt">Prompt</label>
+          <textarea id="imagePrompt">a cat in space</textarea>
+
+          <label for="imageModel">Model</label>
+          <select id="imageModel">
+            <option value="flux">flux</option>
+            <option value="krea">krea</option>
+            <option value="dreamshaper">dreamshaper</option>
+            <option value="ideogram-v4-quality">ideogram-v4-quality</option>
+            <option value="gpt-image-2">gpt-image-2</option>
+            <option value="qwen-image">qwen-image</option>
+            <option value="nova-canvas">nova-canvas</option>
+          </select>
+
+          <button id="genImageBtn">Generate Image</button>
+          <div id="imageStatus" class="status hidden"></div>
+          <img id="imageOutput" class="image-output" alt="Generated image" />
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-audio">
+        <div class="panel">
+          <label for="audioText">Text</label>
+          <textarea id="audioText">Hello world</textarea>
+
+          <div class="grid">
+            <div>
+              <label for="audioVoice">Voice</label>
+              <select id="audioVoice">
+                <option value="nova">nova</option>
+                <option value="alloy">alloy</option>
+                <option value="echo">echo</option>
+                <option value="shimmer">shimmer</option>
+                <option value="fable">fable</option>
+              </select>
+            </div>
+            <div>
+              <label for="audioModel">Model</label>
+              <select id="audioModel">
+                <option value="elevenlabs">elevenlabs</option>
+                <option value="qwen-tts">qwen-tts</option>
+                <option value="whisper">whisper</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="genAudioBtn">Generate Audio</button>
+          <div id="audioStatus" class="status hidden"></div>
+          <audio id="audioOutput" controls></audio>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-video">
+        <div class="panel">
+          <label for="videoPrompt">Prompt</label>
+          <textarea id="videoPrompt">sunset timelapse over the ocean</textarea>
+
+          <div class="grid">
+            <div>
+              <label for="videoModel">Model</label>
+              <select id="videoModel">
+                <option value="veo">veo</option>
+                <option value="wan">wan</option>
+                <option value="seedance-2.0">seedance-2.0</option>
+                <option value="nova-reel">nova-reel</option>
+              </select>
+            </div>
+            <div>
+              <label for="videoDuration">Duration</label>
+              <input id="videoDuration" type="number" value="4" min="1" max="30" />
+            </div>
+          </div>
+
+          <button id="genVideoBtn">Generate Video</button>
+          <div id="videoStatus" class="status hidden"></div>
+          <video id="videoOutput" controls></video>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-embeddings">
+        <div class="panel">
+          <label for="embedText">Text</label>
+          <textarea id="embedText">Hello world</textarea>
+
+          <button id="genEmbedBtn">Generate Embedding</button>
+          <div id="embedStatus" class="status hidden"></div>
+          <pre id="embedOutput" class="output"></pre>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-3d">
+        <div class="panel">
+          <label for="model3dPrompt">Prompt / Image URL</label>
+          <textarea id="model3dPrompt">a toy car</textarea>
+
+          <div class="grid">
+            <div>
+              <label for="model3d">Model</label>
+              <select id="model3d">
+                <option value="trellis-2">trellis-2</option>
+                <option value="hyper3d-rodin">hyper3d-rodin</option>
+              </select>
+            </div>
+            <div>
+              <label for="resolution3d">Resolution</label>
+              <select id="resolution3d">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="gen3dBtn">Generate 3D</button>
+          <div id="model3dStatus" class="status hidden"></div>
+          <pre id="model3dOutput" class="output"></pre>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-models">
+        <div class="panel">
+          <button id="loadModelsBtn">Load /v1/models</button>
+          <div id="modelsStatus" class="status hidden"></div>
+          <pre id="modelsOutput" class="output"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
