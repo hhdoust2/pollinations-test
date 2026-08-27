@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pollinations Test App v6</title>
+  <title>Pollinations Test App v9</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="header">
-      <h1>Pollinations Test App v6</h1>
-      <p>مدل‌ها با billing type: paid / quest / free / unknown</p>
+      <h1>Pollinations Test App v9</h1>
+      <p>Audio و 3D اصلاح شده‌اند.</p>
     </header>
 
     <section class="panel">
@@ -68,18 +68,23 @@
           <label for="audioText">Text</label>
           <textarea id="audioText">Hello world</textarea>
 
+          <label for="audioVoice">Voice</label>
+          <select id="audioVoice"></select>
+          <button type="button" id="reloadAudioVoices">Reload Voices</button>
+
           <div class="grid">
             <div>
-              <label for="audioVoice">Voice</label>
-              <select id="audioVoice"></select>
+              <label for="audioMode">Mode</label>
+              <select id="audioMode">
+                <option value="url">GET /audio/{text}</option>
+                <option value="speech">POST /v1/audio/speech</option>
+              </select>
             </div>
             <div>
               <label for="audioModel">Audio Model</label>
-              <select id="audioModel"></select>
+              <input id="audioModel" type="text" placeholder="مثلاً: elevenlabs یا qwen-tts" />
             </div>
           </div>
-
-          <button type="button" id="reloadAudioModels">Reload Audio Models</button>
 
           <button id="genAudioBtn">Generate Audio</button>
           <div id="audioStatus" class="status hidden"></div>
@@ -131,14 +136,14 @@
       <section class="tab-panel" id="tab-3d">
         <div class="panel">
           <h2>3D Generation</h2>
-          <label for="model3dPrompt">Image URL / Prompt</label>
-          <textarea id="model3dPrompt">https://example.com/image.jpg</textarea>
+          <label for="model3dInput">Image URL or Text Prompt</label>
+          <textarea id="model3dInput">a toy car</textarea>
+
+          <label for="model3d">3D Model</label>
+          <select id="model3d"></select>
+          <button type="button" id="reload3dModels">Reload 3D Models</button>
 
           <div class="grid">
-            <div>
-              <label for="model3d">3D Model</label>
-              <select id="model3d"></select>
-            </div>
             <div>
               <label for="resolution3d">Resolution</label>
               <select id="resolution3d">
@@ -147,9 +152,11 @@
                 <option value="high">high</option>
               </select>
             </div>
+            <div>
+              <label for="3dImageModel">Image model for text→3D</label>
+              <select id="3dImageModel"></select>
+            </div>
           </div>
-
-          <button type="button" id="reload3dModels">Reload 3D Models</button>
 
           <button id="gen3dBtn">Generate 3D</button>
           <div id="model3dStatus" class="status hidden"></div>
