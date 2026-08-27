@@ -1,73 +1,5 @@
 const baseUrl = 'https://gen.pollinations.ai';
 
-const MODEL_CATEGORIES = {
-  text: [
-    'openai',
-    'openai-fast',
-    'gpt-oss',
-    'gpt-5.4',
-    'gpt-5.4-mini',
-    'openai-large',
-    'gemini-fast',
-    'claude',
-    'claude-sonnet-5',
-    'deepseek',
-    'llama',
-    'qwen-coder',
-  ],
-  image: [
-    'flux',
-    'krea',
-    'dreamshaper',
-    'kontext',
-    'seedream5',
-    'seedream5-pro',
-    'ideogram-v4-quality',
-    'gptimage',
-    'gpt-image-2',
-    'qwen-image',
-    'nova-canvas',
-  ],
-  audio: [
-    'elevenlabs',
-    'elevenflash',
-    'eleven-multilingual-v2',
-    'qwen-tts',
-    'qwen-tts-instruct',
-    'whisper',
-    'gpt-transcribe',
-    'scribe',
-    'grok-tts',
-    'kokoro',
-  ],
-  video: [
-    'veo',
-    'seedance-2.0',
-    'seedance-2.5',
-    'wan',
-    'wan-fast',
-    'wan-pro',
-    'grok-video-pro',
-    'nova-reel',
-  ],
-  embeddings: [
-    'gemini-2',
-    'openai-3-small',
-    'openai-3-large',
-    'cohere-embed-v4',
-    'qwen3-embedding-8b',
-  ],
-  '3d': [
-    'trellis-2',
-    'hyper3d-rodin',
-  ],
-};
-
-const VOICES = [
-  'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer',
-  'ash', 'ballad', 'coral', 'sage', 'verse'
-];
-
 function getApiKey() {
   return document.getElementById('apiKey').value.trim();
 }
@@ -81,6 +13,10 @@ function setStatus(el, message, isError = false) {
 
 function fillSelect(selectId, items) {
   const select = document.getElementById(selectId);
+  select.innerHTML = '';
+
+  if (!items || !items.length) return;
+
   select.innerHTML = items.map(v => `<option value="${v}">${v}</option>`).join('');
 }
 
@@ -102,14 +38,67 @@ async function apiFetch(path, options = {}) {
   return await res.text();
 }
 
-// init selects
-fillSelect('textModel', MODEL_CATEGORIES.text);
-fillSelect('imageModel', MODEL_CATEGORIES.image);
-fillSelect('audioVoice', VOICES);
-fillSelect('audioModel', ['elevenlabs', 'qwen-tts', 'gpt-transcribe', 'scribe', 'kokoro']);
-fillSelect('videoModel', MODEL_CATEGORIES.video);
-fillSelect('embedModel', MODEL_CATEGORIES.embeddings);
-fillSelect('model3d', MODEL_CATEGORIES['3d']);
+function normalizeModelList(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+function filterCategoryModels(models, category) {
+  return models
+    .map(m => (typeof m === 'string' ? m : m?.id))
+    .filter(Boolean)
+    .filter(id => {
+      const x = id.toLowerCase();
+
+      if (category === 'text') {
+        return !x.includes('image') && !x.includes('video') && !x.includes('audio') && !x.includes('embed') && !x.includes('3d');
+      }
+      if (category === 'image') {
+        return x.includes('image') || x.includes('flux') || x.includes('dream') || x.includes('ideogram') || x.includes('canvas') || x.includes('krea') || x.includes('zimage');
+      }
+      if (category === 'audio') {
+        return x.includes('audio') || x.includes('tts') || x.includes('whisper') || x.includes('scribe') || x.includes('kokoro') || x.includes('eleven');
+      }
+      if (category === 'video') {
+        return x.includes('video') || x.includes('veo') || x.includes('wan') || x.includes('seedance') || x.includes('reel');
+      }
+      if (category === 'embeddings') {
+        return x.includes('embed');
+      }
+      if (category === '3d') {
+        return x.includes('3d') || x.includes('trellis') || x.includes('rodin');
+      }
+      return false;
+    });
+}
+
+async function loadModelsFromApi() {
+  const res = await fetch(`${baseUrl}/v1/models`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  return normalizeModelList(data);
+}
+
+async function refreshCategory(category, selectId, debugElId = null) {
+  const items = filterCategoryModels(await loadModelsFromApi(), category);
+  fillSelect(selectId, items);
+  if (debugElId) document.getElementById(debugElId).textContent = JSON.stringify(items, null, 2);
+}
+
+async function initAllModelSelects() {
+  try {
+    await refreshCategory('text', 'textModel');
+    await refreshCategory('image', 'imageModel');
+    await refreshCategory('audio', 'audioModel');
+    await refreshCategory('video', 'videoModel');
+    await refreshCategory('embeddings', 'embedModel');
+    await refreshCategory('3d', 'model3d');
+  } catch (e) {
+    console.warn('Model select init failed:', e.message);
+  }
+}
 
 // tabs
 document.querySelectorAll('.tab').forEach((btn) => {
@@ -121,6 +110,14 @@ document.querySelectorAll('.tab').forEach((btn) => {
   });
 });
 
+// reload buttons
+document.getElementById('reloadTextModels').addEventListener('click', () => refreshCategory('text', 'textModel'));
+document.getElementById('reloadImageModels').addEventListener('click', () => refreshCategory('image', 'imageModel'));
+document.getElementById('reloadAudioModels').addEventListener('click', () => refreshCategory('audio', 'audioModel'));
+document.getElementById('reloadVideoModels').addEventListener('click', () => refreshCategory('video', 'videoModel'));
+document.getElementById('reloadEmbedModels').addEventListener('click', () => refreshCategory('embeddings', 'embedModel'));
+document.getElementById('reload3dModels').addEventListener('click', () => refreshCategory('3d', 'model3d'));
+
 // text
 document.getElementById('genTextBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('textStatus');
@@ -129,11 +126,13 @@ document.getElementById('genTextBtn').addEventListener('click', async () => {
     setStatus(statusEl, 'در حال تولید متن...');
     const prompt = document.getElementById('textPrompt').value.trim();
     const model = document.getElementById('textModel').value;
+
     const data = await apiFetch('/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
     });
+
     outputEl.textContent = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
     setStatus(statusEl, 'متن تولید شد.');
   } catch (e) {
@@ -160,7 +159,7 @@ document.getElementById('genImageBtn').addEventListener('click', () => {
   outputEl.src = url;
 });
 
-// audio (URL-based)
+// audio
 document.getElementById('genAudioBtn').addEventListener('click', () => {
   const statusEl = document.getElementById('audioStatus');
   const outputEl = document.getElementById('audioOutput');
@@ -172,13 +171,12 @@ document.getElementById('genAudioBtn').addEventListener('click', () => {
   if (!text) return setStatus(statusEl, 'متن صدا خالی است.', true);
 
   setStatus(statusEl, 'در حال ساخت صدا...');
-
   let url = `${baseUrl}/audio/${encodeURIComponent(text)}?voice=${encodeURIComponent(voice)}&model=${encodeURIComponent(model)}`;
   if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
   outputEl.src = url;
   outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
-  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. اگر مدل پشتیبانی نشود، مدل دیگر را امتحان کن.', true);
+  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. اگر مدل پاسخ نداد، مدل دیگری را از لیست امتحان کن.', true);
 });
 
 // video
@@ -193,7 +191,6 @@ document.getElementById('genVideoBtn').addEventListener('click', () => {
   if (!prompt) return setStatus(statusEl, 'پرامپت ویدیو خالی است.', true);
 
   setStatus(statusEl, 'در حال ساخت ویدیو...');
-
   let url = `${baseUrl}/video/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&duration=${encodeURIComponent(duration)}`;
   if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
@@ -236,53 +233,39 @@ document.getElementById('gen3dBtn').addEventListener('click', () => {
   if (!prompt) return setStatus(statusEl, 'ورودی 3D خالی است.', true);
 
   setStatus(statusEl, 'در حال ساخت 3D...');
-
   let url = `${baseUrl}/3d/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&resolution=${encodeURIComponent(resolution)}`;
   if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
-  outputEl.textContent = `3D URL:\n${url}\n\nخروجی معمولاً فایل GLB است.`;
+  outputEl.textContent = url;
   setStatus(statusEl, 'لینک 3D آماده شد.');
 });
 
-// models list by category
-async function loadModelCategory(category) {
-  const outputMap = {
-    text: 'modelsTextOutput',
-    image: 'modelsImageOutput',
-    audio: 'modelsAudioOutput',
-    video: 'modelsVideoOutput',
-    embeddings: 'modelsEmbeddingsOutput',
-    '3d': 'models3dOutput',
-  };
+// load all models and show per category
+document.getElementById('loadAllModelsBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('modelsStatus');
 
-  const outputEl = document.getElementById(outputMap[category]);
   try {
-    outputEl.textContent = 'در حال دریافت...';
-    const res = await fetch(`${baseUrl}/v1/models`);
-    const data = await res.json();
+    setStatus(statusEl, 'در حال دریافت مدل‌ها...');
+    const models = await loadModelsFromApi();
 
-    const allModels = data?.data || [];
-    const filtered = allModels.filter(m => {
-      const id = (m.id || '').toLowerCase();
-      if (category === '3d') return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
-      if (category === 'embeddings') return (m.object || '').includes('model') || id.includes('embed');
-      if (category === 'audio') return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro');
-      if (category === 'video') return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance');
-      if (category === 'image') return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea');
-      if (category === 'text') return !(id.includes('image') || id.includes('video') || id.includes('audio') || id.includes('embed') || id.includes('3d'));
-      return true;
-    });
+    const textModels = filterCategoryModels(models, 'text');
+    const imageModels = filterCategoryModels(models, 'image');
+    const audioModels = filterCategoryModels(models, 'audio');
+    const videoModels = filterCategoryModels(models, 'video');
+    const embeddingModels = filterCategoryModels(models, 'embeddings');
+    const model3d = filterCategoryModels(models, '3d');
 
-    outputEl.textContent = JSON.stringify(filtered.map(m => ({
-      id: m.id,
-      object: m.object,
-      created: m.created,
-    })), null, 2);
+    document.getElementById('modelsTextOutput').textContent = JSON.stringify(textModels, null, 2);
+    document.getElementById('modelsImageOutput').textContent = JSON.stringify(imageModels, null, 2);
+    document.getElementById('modelsAudioOutput').textContent = JSON.stringify(audioModels, null, 2);
+    document.getElementById('modelsVideoOutput').textContent = JSON.stringify(videoModels, null, 2);
+    document.getElementById('modelsEmbeddingsOutput').textContent = JSON.stringify(embeddingModels, null, 2);
+    document.getElementById('models3dOutput').textContent = JSON.stringify(model3d, null, 2);
+
+    setStatus(statusEl, 'مدل‌ها لود شدند.');
   } catch (e) {
-    outputEl.textContent = e.message;
+    setStatus(statusEl, e.message, true);
   }
-}
-
-document.querySelectorAll('[data-load-models]').forEach((btn) => {
-  btn.addEventListener('click', () => loadModelCategory(btn.dataset.loadModels));
 });
+
+document.addEventListener('DOMContentLoaded', initAllModelSelects);
