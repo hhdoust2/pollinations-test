@@ -14,10 +14,10 @@ function setStatus(el, message, isError = false) {
 function fillSelect(selectId, items) {
   const select = document.getElementById(selectId);
   select.innerHTML = '';
-
   if (!items || !items.length) return;
-
-  select.innerHTML = items.map(v => `<option value="${v}">${v}</option>`).join('');
+  select.innerHTML = items
+    .map((item) => `<option value="${item.id}">${item.label}</option>`)
+    .join('');
 }
 
 async function apiFetch(path, options = {}) {
@@ -45,33 +45,71 @@ function normalizeModelList(data) {
   return [];
 }
 
-function filterCategoryModels(models, category) {
-  return models
-    .map(m => (typeof m === 'string' ? m : m?.id))
-    .filter(Boolean)
-    .filter(id => {
-      const x = id.toLowerCase();
+function detectBillingType(model) {
+  const raw = JSON.stringify(model).toLowerCase();
 
-      if (category === 'text') {
-        return !x.includes('image') && !x.includes('video') && !x.includes('audio') && !x.includes('embed') && !x.includes('3d');
-      }
-      if (category === 'image') {
-        return x.includes('image') || x.includes('flux') || x.includes('dream') || x.includes('ideogram') || x.includes('canvas') || x.includes('krea') || x.includes('zimage');
-      }
-      if (category === 'audio') {
-        return x.includes('audio') || x.includes('tts') || x.includes('whisper') || x.includes('scribe') || x.includes('kokoro') || x.includes('eleven');
-      }
-      if (category === 'video') {
-        return x.includes('video') || x.includes('veo') || x.includes('wan') || x.includes('seedance') || x.includes('reel');
-      }
-      if (category === 'embeddings') {
-        return x.includes('embed');
-      }
-      if (category === '3d') {
-        return x.includes('3d') || x.includes('trellis') || x.includes('rodin');
-      }
-      return false;
-    });
+  if (raw.includes('"paid"') || raw.includes('billing":"paid') || raw.includes('pricing') && raw.includes('paid')) {
+    return 'paid';
+  }
+  if (raw.includes('"quest"') || raw.includes('billing":"quest') || raw.includes('pricing') && raw.includes('quest')) {
+    return 'quest';
+  }
+  if (raw.includes('"free"') || raw.includes('billing":"free') || raw.includes('pricing') && raw.includes('free')) {
+    return 'free';
+  }
+  return 'unknown';
+}
+
+function getModelId(model) {
+  if (typeof model === 'string') return model;
+  return model?.id || '';
+}
+
+function getLabel(model) {
+  const id = getModelId(model);
+  const billing = detectBillingType(model);
+  return `${id} — ${billing}`;
+}
+
+function filterCategoryModels(models, category) {
+  return models.filter((m) => {
+    const id = getModelId(m).toLowerCase();
+    if (!id) return false;
+
+    if (category === 'text') {
+      return !id.includes('image') && !id.includes('video') && !id.includes('audio') && !id.includes('embed') && !id.includes('3d');
+    }
+    if (category === 'image') {
+      return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea') || id.includes('zimage');
+    }
+    if (category === 'audio') {
+      return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro') || id.includes('eleven');
+    }
+    if (category === 'video') {
+      return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance') || id.includes('reel');
+    }
+    if (category === 'embeddings') {
+      return id.includes('embed');
+    }
+    if (category === '3d') {
+      return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
+    }
+    return false;
+  }).map((m) => {
+    const id = getModelId(m);
+    return { id, label: getLabel(m), raw: m };
+  });
+}
+
+function groupByBilling(models) {
+  const groups = { paid: [], quest: [], free: [], unknown: [] };
+  models.forEach((m) => {
+    const billing = detectBillingType(m);
+    const id = getModelId(m);
+    if (!id) return;
+    groups[billing].push({ id, label: getLabel(m), raw: m });
+  });
+  return groups;
 }
 
 async function loadModelsFromApi() {
@@ -81,10 +119,10 @@ async function loadModelsFromApi() {
   return normalizeModelList(data);
 }
 
-async function refreshCategory(category, selectId, debugElId = null) {
-  const items = filterCategoryModels(await loadModelsFromApi(), category);
+async function refreshCategory(category, selectId) {
+  const models = await loadModelsFromApi();
+  const items = filterCategoryModels(models, category);
   fillSelect(selectId, items);
-  if (debugElId) document.getElementById(debugElId).textContent = JSON.stringify(items, null, 2);
 }
 
 async function initAllModelSelects() {
@@ -176,7 +214,7 @@ document.getElementById('genAudioBtn').addEventListener('click', () => {
 
   outputEl.src = url;
   outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
-  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. اگر مدل پاسخ نداد، مدل دیگری را از لیست امتحان کن.', true);
+  outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا.', true);
 });
 
 // video
@@ -240,29 +278,21 @@ document.getElementById('gen3dBtn').addEventListener('click', () => {
   setStatus(statusEl, 'لینک 3D آماده شد.');
 });
 
-// load all models and show per category
+// models by billing type
 document.getElementById('loadAllModelsBtn').addEventListener('click', async () => {
   const statusEl = document.getElementById('modelsStatus');
 
   try {
     setStatus(statusEl, 'در حال دریافت مدل‌ها...');
     const models = await loadModelsFromApi();
+    const groups = groupByBilling(models);
 
-    const textModels = filterCategoryModels(models, 'text');
-    const imageModels = filterCategoryModels(models, 'image');
-    const audioModels = filterCategoryModels(models, 'audio');
-    const videoModels = filterCategoryModels(models, 'video');
-    const embeddingModels = filterCategoryModels(models, 'embeddings');
-    const model3d = filterCategoryModels(models, '3d');
+    document.getElementById('modelsPaidOutput').textContent = JSON.stringify(groups.paid, null, 2);
+    document.getElementById('modelsQuestOutput').textContent = JSON.stringify(groups.quest, null, 2);
+    document.getElementById('modelsFreeOutput').textContent = JSON.stringify(groups.free, null, 2);
+    document.getElementById('modelsUnknownOutput').textContent = JSON.stringify(groups.unknown, null, 2);
 
-    document.getElementById('modelsTextOutput').textContent = JSON.stringify(textModels, null, 2);
-    document.getElementById('modelsImageOutput').textContent = JSON.stringify(imageModels, null, 2);
-    document.getElementById('modelsAudioOutput').textContent = JSON.stringify(audioModels, null, 2);
-    document.getElementById('modelsVideoOutput').textContent = JSON.stringify(videoModels, null, 2);
-    document.getElementById('modelsEmbeddingsOutput').textContent = JSON.stringify(embeddingModels, null, 2);
-    document.getElementById('models3dOutput').textContent = JSON.stringify(model3d, null, 2);
-
-    setStatus(statusEl, 'مدل‌ها لود شدند.');
+    setStatus(statusEl, 'مدل‌ها بر اساس billing type جدا شدند.');
   } catch (e) {
     setStatus(statusEl, e.message, true);
   }
