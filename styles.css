@@ -137,12 +137,6 @@ audio, video {
   margin-top: 6px;
 }
 
-.model-block {
-  margin-top: 18px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-}
-
 @media (max-width: 700px) {
   .grid {
     grid-template-columns: 1fr;
