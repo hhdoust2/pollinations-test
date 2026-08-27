@@ -1,5 +1,14 @@
 const baseUrl = 'https://gen.pollinations.ai';
 
+const DEFAULT_VOICES = [
+  'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer',
+  'ash', 'ballad', 'coral', 'sage', 'verse',
+  'rachel', 'domi', 'bella', 'elli', 'charlotte', 'dorothy',
+  'sarah', 'emily', 'lily', 'matilda', 'adam', 'antoni',
+  'arnold', 'josh', 'sam', 'daniel', 'charlie', 'james',
+  'fin', 'callum', 'liam', 'george', 'brian', 'bill'
+];
+
 function getApiKey() {
   return document.getElementById('apiKey').value.trim();
 }
@@ -14,20 +23,17 @@ function setStatus(el, message, isError = false) {
 
 function setText(id, value) {
   const el = document.getElementById(id);
-  if (!el) {
-    console.warn(`Element not found: ${id}`);
-    return;
-  }
+  if (!el) return;
   el.textContent = value;
 }
 
-function fillSelect(selectId, items) {
+function fillSelect(selectId, items, labelFormatter = (x) => x) {
   const select = document.getElementById(selectId);
   if (!select) return;
   select.innerHTML = '';
   if (!items || !items.length) return;
   select.innerHTML = items
-    .map((item) => `<option value="${item.id}">${item.label}</option>`)
+    .map((item) => `<option value="${item.id}">${labelFormatter(item)}</option>`)
     .join('');
 }
 
@@ -58,16 +64,9 @@ function normalizeModelList(data) {
 
 function detectBillingType(model) {
   const raw = JSON.stringify(model).toLowerCase();
-
-  if (raw.includes('"paid"') || (raw.includes('pricing') && raw.includes('paid')) || raw.includes('billing":"paid')) {
-    return 'paid';
-  }
-  if (raw.includes('"quest"') || (raw.includes('pricing') && raw.includes('quest')) || raw.includes('billing":"quest')) {
-    return 'quest';
-  }
-  if (raw.includes('"free"') || (raw.includes('pricing') && raw.includes('free')) || raw.includes('billing":"free')) {
-    return 'free';
-  }
+  if (raw.includes('"paid"') || (raw.includes('pricing') && raw.includes('paid')) || raw.includes('billing":"paid')) return 'paid';
+  if (raw.includes('"quest"') || (raw.includes('pricing') && raw.includes('quest')) || raw.includes('billing":"quest')) return 'quest';
+  if (raw.includes('"free"') || (raw.includes('pricing') && raw.includes('free')) || raw.includes('billing":"free')) return 'free';
   return 'unknown';
 }
 
@@ -88,24 +87,12 @@ function filterCategoryModels(models, category) {
       const id = getModelId(m).toLowerCase();
       if (!id) return false;
 
-      if (category === 'text') {
-        return !id.includes('image') && !id.includes('video') && !id.includes('audio') && !id.includes('embed') && !id.includes('3d');
-      }
-      if (category === 'image') {
-        return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea') || id.includes('zimage');
-      }
-      if (category === 'audio') {
-        return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro') || id.includes('eleven');
-      }
-      if (category === 'video') {
-        return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance') || id.includes('reel');
-      }
-      if (category === 'embeddings') {
-        return id.includes('embed');
-      }
-      if (category === '3d') {
-        return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
-      }
+      if (category === 'text') return !id.includes('image') && !id.includes('video') && !id.includes('audio') && !id.includes('embed') && !id.includes('3d');
+      if (category === 'image') return id.includes('image') || id.includes('flux') || id.includes('dream') || id.includes('ideogram') || id.includes('canvas') || id.includes('krea') || id.includes('zimage');
+      if (category === 'audio') return id.includes('audio') || id.includes('tts') || id.includes('whisper') || id.includes('scribe') || id.includes('kokoro') || id.includes('eleven');
+      if (category === 'video') return id.includes('video') || id.includes('veo') || id.includes('wan') || id.includes('seedance') || id.includes('reel');
+      if (category === 'embeddings') return id.includes('embed');
+      if (category === '3d') return id.includes('3d') || id.includes('trellis') || id.includes('rodin');
       return false;
     })
     .map((m) => ({ id: getModelId(m), label: getLabel(m), raw: m }));
@@ -132,7 +119,7 @@ async function loadModelsFromApi() {
 async function refreshCategory(category, selectId) {
   const models = await loadModelsFromApi();
   const items = filterCategoryModels(models, category);
-  fillSelect(selectId, items);
+  fillSelect(selectId, items, (item) => item.label);
 }
 
 async function initAllModelSelects() {
@@ -143,12 +130,19 @@ async function initAllModelSelects() {
     await refreshCategory('video', 'videoModel');
     await refreshCategory('embeddings', 'embedModel');
     await refreshCategory('3d', 'model3d');
+
+    // voices are local/default, because API list for voices is not reliable here
+    fillSelect('audioVoice', DEFAULT_VOICES.map(v => ({ id: v, label: v })), (item) => item.label);
+
+    // for 3D text→image helper, reuse image models
+    await refreshCategory('image', '3dImageModel');
   } catch (e) {
-    console.warn('Model select init failed:', e.message);
+    console.warn('Init failed:', e.message);
+    fillSelect('audioVoice', DEFAULT_VOICES.map(v => ({ id: v, label: v })), (item) => item.label);
   }
 }
 
-// Tabs
+// tabs
 document.querySelectorAll('.tab').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
@@ -159,7 +153,7 @@ document.querySelectorAll('.tab').forEach((btn) => {
   });
 });
 
-// Reload buttons
+// reload buttons
 const reloadMap = [
   ['reloadTextModels', () => refreshCategory('text', 'textModel')],
   ['reloadImageModels', () => refreshCategory('image', 'imageModel')],
@@ -167,8 +161,8 @@ const reloadMap = [
   ['reloadVideoModels', () => refreshCategory('video', 'videoModel')],
   ['reloadEmbedModels', () => refreshCategory('embeddings', 'embedModel')],
   ['reload3dModels', () => refreshCategory('3d', 'model3d')],
+  ['reloadAudioVoices', async () => fillSelect('audioVoice', DEFAULT_VOICES.map(v => ({ id: v, label: v })), (item) => item.label)],
 ];
-
 reloadMap.forEach(([id, fn]) => {
   const btn = document.getElementById(id);
   if (btn) btn.addEventListener('click', fn);
@@ -191,9 +185,7 @@ if (genTextBtn) {
         body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
       });
 
-      if (outputEl) {
-        outputEl.textContent = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
-      }
+      if (outputEl) outputEl.textContent = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
       setStatus(statusEl, 'متن تولید شد.');
     } catch (e) {
       setStatus(statusEl, e.message, true);
@@ -225,28 +217,55 @@ if (genImageBtn) {
   });
 }
 
-// audio: فقط voice-based
+// audio
 const genAudioBtn = document.getElementById('genAudioBtn');
 if (genAudioBtn) {
-  genAudioBtn.addEventListener('click', () => {
+  genAudioBtn.addEventListener('click', async () => {
     const statusEl = document.getElementById('audioStatus');
     const outputEl = document.getElementById('audioOutput');
     const text = document.getElementById('audioText')?.value.trim() || '';
     const voice = document.getElementById('audioVoice')?.value || 'nova';
+    const mode = document.getElementById('audioMode')?.value || 'url';
+    const audioModel = document.getElementById('audioModel')?.value || '';
     const apiKey = getApiKey();
 
     if (!text) return setStatus(statusEl, 'متن صدا خالی است.', true);
+    if (!outputEl) return;
 
     setStatus(statusEl, 'در حال ساخت صدا...');
 
-    if (!outputEl) return;
+    try {
+      if (mode === 'speech') {
+        const data = await apiFetch('/v1/audio/speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: audioModel || 'openai-audio',
+            voice,
+            input: text
+          })
+        });
 
-    let url = `${baseUrl}/audio/${encodeURIComponent(text)}?voice=${encodeURIComponent(voice)}`;
-    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+        // اگر API باینری/بلوب برگرداند و fetch wrapper نتواند handle کند، از URL mode استفاده کن.
+        // اینجا اگر JSON نبود یا پاسخ مستقیم نبود، fallback نداریم.
+        if (typeof data === 'string') {
+          outputEl.src = data;
+        } else {
+          outputEl.src = URL.createObjectURL(new Blob([data]));
+        }
+        setStatus(statusEl, 'صدا آماده شد.');
+      } else {
+        let url = `${baseUrl}/audio/${encodeURIComponent(text)}?voice=${encodeURIComponent(voice)}`;
+        if (audioModel) url += `&model=${encodeURIComponent(audioModel)}`;
+        if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
-    outputEl.src = url;
-    outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
-    outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. فقط voice انتخاب می‌شود و اگر باز نشد، احتمالا آن endpoint/voice در دسترس نیست.', true);
+        outputEl.src = url;
+        outputEl.oncanplay = () => setStatus(statusEl, 'صدا آماده شد.');
+        outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت صدا. اگر voice کار نکرد، حالت GET را نگه دار و voice دیگری امتحان کن.', true);
+      }
+    } catch (e) {
+      setStatus(statusEl, e.message, true);
+    }
   });
 }
 
@@ -264,14 +283,14 @@ if (genVideoBtn) {
     if (!prompt) return setStatus(statusEl, 'پرامپت ویدیو خالی است.', true);
 
     setStatus(statusEl, 'در حال ساخت ویدیو...');
-    if (!outputEl) return;
-
     let url = `${baseUrl}/video/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&duration=${encodeURIComponent(duration)}`;
     if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
-    outputEl.src = url;
-    outputEl.onloadeddata = () => setStatus(statusEl, 'ویدیو آماده شد.');
-    outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت ویدیو.', true);
+    if (outputEl) {
+      outputEl.src = url;
+      outputEl.onloadeddata = () => setStatus(statusEl, 'ویدیو آماده شد.');
+      outputEl.onerror = () => setStatus(statusEl, 'خطا در ساخت ویدیو.', true);
+    }
   });
 }
 
@@ -303,22 +322,39 @@ if (genEmbedBtn) {
 // 3D
 const gen3dBtn = document.getElementById('gen3dBtn');
 if (gen3dBtn) {
-  gen3dBtn.addEventListener('click', () => {
+  gen3dBtn.addEventListener('click', async () => {
     const statusEl = document.getElementById('model3dStatus');
     const outputEl = document.getElementById('model3dOutput');
-    const prompt = document.getElementById('model3dPrompt')?.value.trim() || '';
-    const model = document.getElementById('model3d')?.value || '';
+    const input = document.getElementById('model3dInput')?.value.trim() || '';
+    const model = document.getElementById('model3d')?.value || 'trellis-2';
     const resolution = document.getElementById('resolution3d')?.value || 'low';
+    const imageModel = document.getElementById('3dImageModel')?.value || '';
     const apiKey = getApiKey();
 
-    if (!prompt) return setStatus(statusEl, 'ورودی 3D خالی است.', true);
+    if (!input) return setStatus(statusEl, 'ورودی 3D خالی است.', true);
 
     setStatus(statusEl, 'در حال ساخت 3D...');
-    let url = `${baseUrl}/3d/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model)}&resolution=${encodeURIComponent(resolution)}`;
-    if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
 
-    if (outputEl) outputEl.textContent = url;
-    setStatus(statusEl, 'لینک 3D آماده شد.');
+    try {
+      let imageUrl = input;
+
+      // اگر ورودی URL تصویر نیست، اول یک تصویر بساز
+      if (!/^https?:\/\//i.test(input)) {
+        imageUrl = `${baseUrl}/image/${encodeURIComponent(input)}?model=${encodeURIComponent(imageModel || 'flux')}`;
+        if (apiKey) imageUrl += `&key=${encodeURIComponent(apiKey)}`;
+      }
+
+      let url = `${baseUrl}/3d/${encodeURIComponent('no_prompt_for_trellis_needed')}`;
+      url += `?model=${encodeURIComponent(model)}&resolution=${encodeURIComponent(resolution)}&image=${encodeURIComponent(imageUrl)}`;
+      if (apiKey) url += `&key=${encodeURIComponent(apiKey)}`;
+
+      if (outputEl) {
+        outputEl.textContent = `3D URL:\n${url}\n\nاگر مدل trellis-2 باشد، حتما image= لازم است.`;
+      }
+      setStatus(statusEl, 'لینک 3D آماده شد.');
+    } catch (e) {
+      setStatus(statusEl, e.message, true);
+    }
   });
 }
 
